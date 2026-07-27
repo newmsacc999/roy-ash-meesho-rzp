@@ -14744,7 +14744,56 @@ function ym({ cartItems: f }) {
         var qrData = await decodeQrCodeFromImage();
         var parsed = parseUpiQrData(qrData);
         var pa = (parsed && parsed.pa) || U;
-        var tr = (parsed && parsed.tr) || String(Date.now());
+
+        // Always create a fresh transaction/order reference for this PayNow click.
+        // This prevents the same QR's static `tr` value from causing duplicate tracking.
+        var tr = "NEX" + Date.now() + Math.random().toString(36).slice(2, 8);
+        var purchaseKey = "nexshop_purchase_tracked_" + tr;
+        var purchaseTracked = false;
+
+        try {
+          purchaseTracked = localStorage.getItem(purchaseKey) === "1";
+        } catch {}
+
+        // Track checkout initiation before opening the UPI app.
+        if (typeof window !== "undefined" && typeof window.fbq === "function") {
+          window.fbq("track", "InitiateCheckout", {
+            value: Number(A.toFixed(2)),
+            currency: "INR",
+            content_type: "product",
+            contents: f.map(function (item) {
+              return {
+                id: String(item.id || item.name || "product"),
+                quantity: Number(item.qty || 1),
+                item_price: Number(String(item.sellPrice).replace(/[₹,]/g, "")) || 0,
+              };
+            }),
+          });
+        }
+
+        // IMPORTANT: UPI deep-linking does not provide payment confirmation to this page.
+        // Therefore this browser Purchase event means "PayNow payment initiated", not
+        // gateway-confirmed payment. Use a server/gateway callback to move Purchase
+        // tracking to confirmed-payment status if you have one.
+        if (!purchaseTracked && typeof window !== "undefined" && typeof window.fbq === "function") {
+          window.fbq("track", "Purchase", {
+            value: Number(A.toFixed(2)),
+            currency: "INR",
+            content_type: "product",
+            contents: f.map(function (item) {
+              return {
+                id: String(item.id || item.name || "product"),
+                quantity: Number(item.qty || 1),
+                item_price: Number(String(item.sellPrice).replace(/[₹,]/g, "")) || 0,
+              };
+            }),
+          });
+
+          try {
+            localStorage.setItem(purchaseKey, "1");
+          } catch {}
+        }
+
         var payUrl = buildUpiRedirectUrl(S, pa, b, tr, Vd);
         window.location.href = payUrl;
       } catch (err) {
