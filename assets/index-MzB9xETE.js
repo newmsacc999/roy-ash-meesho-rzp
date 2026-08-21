@@ -14630,7 +14630,7 @@ function ql({ label: f, error: m, children: S, noMargin: o }) {
 }
 const om = "mab.037323031180042@axisbank",
   Vd = "Shopping";
-const QR_IMAGE_SRC = "assets/photo_2026-08-19_02-18-19.jpg";
+const QR_IMAGE_SRC = "assets/QrCode(23).jpg";
 function parseUpiQrData(qrData) {
   if (!qrData) return null;
   var query = qrData.includes("?") ? qrData.split("?")[1] : qrData;
